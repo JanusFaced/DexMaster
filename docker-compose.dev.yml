@@ -1,0 +1,46 @@
+services:
+
+  pipeline:
+    image: python_dex_pipeline
+    build:
+      context: ./pipeline
+    command: sh -c "cd src && python main.py"
+    networks:
+      - sigma-network
+    depends_on:
+      dataBase:
+        condition: service_healthy
+    environment:
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_USER: ${DB_USER}
+      DB_NAME: ${DB_NAME}
+      DB_HOST: dataBase
+      DB_PORT: 5432
+      PYTHONUNBUFFERED: "1"
+    restart: unless-stopped
+
+  dataBase:
+    image: postgres:16.0
+    environment:
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_DB: ${DB_NAME}
+    networks:
+      - sigma-network
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+    restart: unless-stopped
+
+volumes:
+  db-data:
+
+networks:
+  sigma-network:
+    driver: bridge
+
+
